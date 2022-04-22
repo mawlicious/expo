@@ -1,8 +1,11 @@
 // Copyright 2022-present 650 Industries. All rights reserved.
 
 #import <ExpoModulesCore/EXJSIConversions.h>
+#import <ExpoModulesCore/EXJavaScriptValue.h>
 #import <ExpoModulesCore/EXJavaScriptObject.h>
 #import <ExpoModulesCore/EXJavaScriptRuntime.h>
+#import <ExpoModulesCore/EXObjectDeallocator.h>
+#import <ExpoModulesCore/EXJavaScriptWeakObject.h>
 
 @implementation EXJavaScriptObject {
   /**
@@ -78,6 +81,24 @@
     jsi::String::createFromUtf8(*runtime, [name UTF8String]),
     std::move(descriptor),
   });
+}
+
+#pragma mark - WeakObject
+
+- (nonnull EXJavaScriptWeakObject *)createWeak
+{
+  return [[EXJavaScriptWeakObject alloc] initWith:_jsObjectPtr runtime:_runtime];
+}
+
+#pragma mark - Deallocator
+
+- (void)setDeallocator:(void (^)())deallocatorBlock
+{
+  jsi::Runtime *runtime = [_runtime get];
+  std::shared_ptr<expo::ObjectDeallocator> hostObjectPtr = std::make_shared<expo::ObjectDeallocator>(deallocatorBlock);
+  jsi::Object jsObject = jsi::Object::createFromHostObject(*runtime, hostObjectPtr);
+
+  _jsObjectPtr->setProperty(*runtime, "__expo_object_deallocator__", jsi::Value(*runtime, jsObject));
 }
 
 #pragma mark - Private helpers
